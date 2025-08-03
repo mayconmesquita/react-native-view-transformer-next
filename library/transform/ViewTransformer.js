@@ -2,11 +2,10 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import ReactNative, {
+import {
   View,
   Animated,
-  Easing,
-  NativeModules
+  Easing
 } from 'react-native';
 
 import {createResponder} from 'react-native-gesture-responder';
@@ -36,6 +35,7 @@ export default class ViewTransformer extends React.Component {
       pageY: 0,
     };
     this._viewPortRect = new Rect(); //A holder to avoid new too much
+    this.innerViewRef = React.createRef(); //Replace string ref with createRef
 
     this.cancelAnimation = this.cancelAnimation.bind(this);
     this.contentRect = this.contentRect.bind(this);
@@ -118,7 +118,7 @@ export default class ViewTransformer extends React.Component {
       <View
         {...this.props}
         {...gestureResponder}
-        ref={'innerViewRef'}
+        ref={this.innerViewRef}
         onLayout={this.onLayout.bind(this)}>
         <View
           style={{
@@ -146,18 +146,18 @@ export default class ViewTransformer extends React.Component {
   }
 
   measureLayout() {
-    let handle = ReactNative.findNodeHandle(this.refs['innerViewRef']);
-    NativeModules.UIManager.measure(handle, ((x, y, width, height, pageX, pageY) => {
-      if(typeof pageX === 'number' && typeof pageY === 'number') { //avoid undefined values on Android devices
-        if(this.state.pageX !== pageX || this.state.pageY !== pageY) {
-          this.setState({
-            pageX: pageX,
-            pageY: pageY
-          });
+    if (this.innerViewRef.current) {
+      this.innerViewRef.current.measureInWindow((x, y, width, height) => {
+        if(typeof x === 'number' && typeof y === 'number') { //avoid undefined values on Android devices
+          if(this.state.pageX !== x || this.state.pageY !== y) {
+            this.setState({
+              pageX: x,
+              pageY: y
+            });
+          }
         }
-      }
-
-    }).bind(this));
+      });
+    }
   }
 
   onResponderGrant(evt, gestureState) {
